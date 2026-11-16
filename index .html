@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smagul Madina</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;background:radial-gradient(1200px 600px at 50% -10%,#1d2a4a 0%,#0b1020 60%);color:#e8ecf5;min-height:100vh}
+header{text-align:center;padding:36px 16px 8px}
+h1{margin:0;font-size:clamp(28px,6vw,42px);font-weight:800;letter-spacing:.5px;background:linear-gradient(90deg,#f5d58a,#e0a84b);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{margin-top:6px;color:#8b95ad;font-size:14px;letter-spacing:2px;text-transform:uppercase}
+.wrap{display:flex;flex-wrap:wrap;gap:28px;justify-content:center;padding:24px 16px 48px}
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(8px);border-radius:24px;padding:22px;width:min(440px,100%);box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.title{width:100%;background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.1);color:#f5d58a;font-size:20px;font-weight:700;text-align:center;padding:4px 0 12px;margin-bottom:16px;outline:none}
+.wheelbox{position:relative;width:100%;aspect-ratio:1}
+canvas{width:100%;height:100%;filter:drop-shadow(0 12px 24px rgba(0,0,0,.45))}
+.ptr{position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:15px solid transparent;border-right:15px solid transparent;border-top:30px solid #f5d58a;filter:drop-shadow(0 3px 4px #0009);z-index:2}
+button{cursor:pointer;border:none;border-radius:12px;font-weight:600;font-family:inherit;transition:transform .1s,opacity .2s}
+button:active{transform:scale(.97)}
+.spin{width:100%;padding:15px;margin:18px 0 10px;background:linear-gradient(135deg,#f5d58a,#d99a3c);color:#1a1405;font-size:17px;letter-spacing:1px;text-transform:uppercase;box-shadow:0 8px 20px rgba(217,154,60,.3)}
+.spin:disabled{opacity:.4;box-shadow:none}
+.res{text-align:center;min-height:30px;font-size:19px;color:#f5d58a;font-weight:700}
+.add{display:flex;gap:8px;margin-top:14px}
+.add input{flex:1;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.25);color:#fff;font-size:15px;outline:none}
+.add input:focus{border-color:#f5d58a}
+.add button{padding:0 18px;background:rgba(245,213,138,.15);color:#f5d58a;font-size:22px;border:1px solid rgba(245,213,138,.35)}
+ul{list-style:none;padding:0;margin:12px 0 0;max-height:240px;overflow:auto}
+li{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:rgba(255,255,255,.04);margin-bottom:5px;font-size:14px}
+li span{flex:1;word-break:break-word;color:#cfd5e3}
+li .dot{width:10px;height:10px;border-radius:50%;flex:none}
+li button{background:transparent;color:#6b7590;padding:2px 6px;font-size:14px}
+li button:hover{color:#ef6f6f}
+.clear{display:block;margin:10px auto 0;background:transparent;color:#6b7590;font-weight:400;font-size:13px}
+.modal{position:fixed;inset:0;background:rgba(5,8,18,.75);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px;z-index:9}
+.modal.on{display:flex;animation:fi .25s}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+.mbox{background:linear-gradient(180deg,#18213a,#111729);border:1px solid rgba(245,213,138,.25);border-radius:24px;padding:32px 26px;max-width:560px;width:100%;text-align:center;box-shadow:0 30px 80px #000;animation:pop .3s}
+@keyframes pop{from{transform:scale(.9)}to{transform:scale(1)}}
+.mnum{display:inline-block;color:#1a1405;background:#f5d58a;font-weight:800;font-size:14px;letter-spacing:1px;padding:6px 14px;border-radius:999px;margin-bottom:18px;text-transform:uppercase}
+.mtext{font-size:clamp(19px,4.5vw,24px);line-height:1.45;margin-bottom:26px;font-weight:600}
+.mbox button{background:linear-gradient(135deg,#f5d58a,#d99a3c);color:#1a1405;padding:12px 34px;font-size:16px}
+</style></head><body>
+<header><h1>Smagul Madina</h1><div class="sub">Колесо фортуны</div></header>
+<div class="wrap" id="wrap"></div><div class="modal" id="modal"><div class="mbox"><div class="mnum"></div><div class="mtext"></div><button onclick="this.closest('.modal').classList.remove('on')">Жабу</button></div></div>
+<script>
+const COLORS=['#1f3a68','#c8963e','#2d5a8c','#e3c27a','#183054','#a87a2e','#3a6ea5','#d9b062'];
+function load(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function makeWheel(id,defTitle,defItems,modal){
+  const st=load('wheelv3_'+id,{title:defTitle,items:defItems});
+  const c=document.createElement('div');c.className='card';
+  c.innerHTML=`<input class="title" value=""><div class="wheelbox"><div class="ptr"></div><canvas width="800" height="800"></canvas></div>
+  <button class="spin">Айналдыру</button><div class="res"></div>
+  <div class="add"><input placeholder="Новый вариант…"><button>+</button></div><ul></ul><button class="clear">Очистить всё</button>`;
+  document.getElementById('wrap').appendChild(c);
+  const [titleI,addI]=c.querySelectorAll('input'),cv=c.querySelector('canvas'),ctx=cv.getContext('2d'),
+    spinB=c.querySelector('.spin'),res=c.querySelector('.res'),ul=c.querySelector('ul'),addB=c.querySelector('.add button');
+  titleI.value=st.title;titleI.oninput=()=>{st.title=titleI.value;save('wheelv3_'+id,st)};
+  let rot=0,spinning=false;
+  function draw(){
+    const n=st.items.length,R=390;ctx.clearRect(0,0,800,800);ctx.save();ctx.translate(400,400);ctx.rotate(rot);
+    if(!n){ctx.fillStyle='#16203a';ctx.beginPath();ctx.arc(0,0,R,0,7);ctx.fill();ctx.restore();
+      ctx.fillStyle='#6b7590';ctx.font='32px system-ui';ctx.textAlign='center';ctx.fillText('Добавьте варианты',400,410);return}
+    const a=2*Math.PI/n;
+    st.items.forEach((t,i)=>{ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,R,i*a,(i+1)*a);ctx.fillStyle=COLORS[i%COLORS.length];
+      if(n>1&&i===n-1&&i%COLORS.length===0)ctx.fillStyle=COLORS[1];ctx.fill();ctx.strokeStyle='rgba(255,255,255,.25)';ctx.lineWidth=2;ctx.stroke();
+      ctx.save();ctx.rotate(i*a+a/2);ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillStyle=(i%2)?'#1a1405':'#f3f5fa';
+      const lab=modal?String(i+1):t;let fs=modal?Math.min(54,a*R*0.5):Math.min(34,a*R*0.42);ctx.font=`600 ${fs}px system-ui`;
+      while(ctx.measureText(lab).width>R-75&&fs>13){fs--;ctx.font=`600 ${fs}px system-ui`}
+      let s=lab;if(ctx.measureText(s).width>R-75)while(ctx.measureText(s+'…').width>R-75&&s.length>1)s=s.slice(0,-1);if(s!==lab)s+='…';
+      if(modal){ctx.translate(R*0.72,0);ctx.rotate(-(rot+i*a+a/2));ctx.textAlign='center';ctx.fillText(s,0,0)}else ctx.fillText(s,R-28,0);ctx.restore()});
+    ctx.restore();ctx.lineWidth=12;ctx.strokeStyle='#e0a84b';ctx.beginPath();ctx.arc(400,400,392,0,7);ctx.stroke();for(let d=0;d<24;d++){const g=d/24*Math.PI*2;ctx.beginPath();ctx.arc(400+392*Math.cos(g),400+392*Math.sin(g),4,0,7);ctx.fillStyle='#fff6dc';ctx.fill()}const hg=ctx.createRadialGradient(390,390,5,400,400,48);hg.addColorStop(0,'#fff3cf');hg.addColorStop(1,'#c8963e');ctx.beginPath();ctx.arc(400,400,46,0,7);ctx.fillStyle=hg;ctx.fill();
+  }
+  function list(){ul.innerHTML='';st.items.forEach((t,i)=>{const li=document.createElement('li');
+    li.innerHTML=`<div class="dot" style="background:${COLORS[i%COLORS.length]}"></div><span></span><button>✕</button>`;
+    li.querySelector('span').textContent=modal?(i+1)+'. '+t:t;li.querySelector('button').onclick=()=>{st.items.splice(i,1);upd()};ul.appendChild(li)});
+    spinB.disabled=st.items.length<2}
+  function upd(){save('wheelv3_'+id,st);list();draw()}
+  function add(){const v=addI.value.trim();if(!v)return;st.items.push(v);addI.value='';addI.focus();upd()}
+  addB.onclick=add;addI.onkeydown=e=>{if(e.key==='Enter')add()};
+  c.querySelector('.clear').onclick=()=>{if(st.items.length&&confirm('Удалить все варианты?')){st.items=[];res.textContent='';upd()}};
+  spinB.onclick=()=>{if(spinning||st.items.length<2)return;spinning=true;spinB.disabled=true;res.textContent='';
+    const start=rot,target=start+Math.PI*2*(6+Math.random()*4)+Math.random()*Math.PI*2,dur=5000,t0=performance.now();
+    (function f(now){const p=Math.min(1,(now-t0)/dur),e=1-Math.pow(1-p,4);rot=start+(target-start)*e;draw();
+      if(p<1)requestAnimationFrame(f);else{spinning=false;spinB.disabled=false;const n=st.items.length,a=2*Math.PI/n;
+        const ang=((-Math.PI/2-rot)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);const k=Math.floor(ang/a),w=st.items[k];res.textContent=modal?'🎉 Сұрақ №'+(k+1):'🎉 '+w;if(modal){const m=document.getElementById('modal');m.querySelector('.mnum').textContent='Сұрақ №'+(k+1);m.querySelector('.mtext').textContent=w;m.classList.add('on')}}})(t0)};
+  upd();
+}
+makeWheel(1,'Студенттер',['Барлык Нурикамал','Казбек Айым','Жунуспекова Дильшат','Тулегенова Фариза','Магарманова Акерке','Шайзатов Кунболат']);
+makeWheel(2,'Сұрақтар',[
+'Инфляция дегеніміз не?',
+'Инфляция қарқыны бойынша қандай түрлерге бөлінеді?',
+'Айналым теңдеуі M • V = P • Q формуласындағы Q әрпі нені білдіреді?',
+'Сұраныс инфляциясы кезінде графикте қандай үдеріс орын алады?',
+'Шығындар инфляциясының әсерінен экономикада қандай қауіп туындайды?',
+'Инфляциядан кімдер көп ұтылады (зардап шегеді)?',
+'Күтілмеген инфляция жағдайында экономикада кімдер ұтады?',
+'Филлипс қисығы қандай екі көрсеткіштің байланысын көрсетеді?',
+'Қазақстанда базалық мөлшерлемені белгілеп, ақша-несие саясатын жүргізетін кім?',
+'Инфляциялық қысым күшейген кезде Ұлттық Банк қандай негізгі ақша-несие саясаты құралын қолданады?'],true);
+</script></body></html>
